@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "odekake-usagi-settings-v1";
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
 const initialTasks = [
   "おきがえ",
@@ -15,6 +16,41 @@ const initialTasks = [
 function parseTime(timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   return { h: h || 0, m: m || 0 };
+}
+
+function getTargetDateTime(targetTime, now = new Date()) {
+  const { h, m } = parseTime(targetTime);
+  const target = new Date(now);
+  target.setHours(h, m, 0, 0);
+  return target;
+}
+
+function getTimeStatus(targetTime, now = new Date()) {
+  const target = getTargetDateTime(targetTime, now);
+  const diffMs = target.getTime() - now.getTime();
+  const absMinutes = Math.ceil(Math.abs(diffMs) / 60000);
+
+  if (diffMs < 0) {
+    return {
+      mode: "late",
+      label: `${absMinutes}分すぎました`,
+      diffMs,
+    };
+  }
+
+  if (diffMs <= FIVE_MINUTES_MS) {
+    return {
+      mode: "soon",
+      label: `あと ${Math.max(0, Math.ceil(diffMs / 60000))}分`,
+      diffMs,
+    };
+  }
+
+  return {
+    mode: "normal",
+    label: `あと ${Math.ceil(diffMs / 60000)}分`,
+    diffMs,
+  };
 }
 
 function calculateProgress(remainingCount, totalCount) {
@@ -53,13 +89,14 @@ function saveSettings(settings) {
 
 // simple tests
 (function runTests() {
+  const fixedNow = new Date("2026-05-02T07:55:00");
   console.assert(parseTime("08:30").h === 8, "hour parse");
   console.assert(parseTime("08:30").m === 30, "minute parse");
   console.assert(calculateProgress(0, 5) === 100, "progress 100");
-  console.assert(getRabbitMode("normal", false) === "normal", "rabbit normal");
-  console.assert(getRabbitMode("soon", false) === "soon", "rabbit soon");
-  console.assert(getRabbitMode("late", false) === "late", "rabbit late");
   console.assert(getRabbitMode("late", true) === "happy", "rabbit happy wins");
+  console.assert(getTimeStatus("08:00", fixedNow).mode === "soon", "5 minutes left should be soon");
+  console.assert(getTimeStatus("08:10", fixedNow).mode === "normal", "15 minutes left should be normal");
+  console.assert(getTimeStatus("07:50", fixedNow).mode === "late", "past target should be late");
 })();
 
 function Button({ children, className = "", ...props }) {
@@ -261,11 +298,18 @@ export default function App() {
   const [totalTaskCount, setTotalTaskCount] = useState(saved?.totalTaskCount || initialTasks.length);
   const [newTask, setNewTask] = useState("");
   const [doneFlash, setDoneFlash] = useState(false);
-  const [timeMode, setTimeMode] = useState("normal");
+  const [now, setNow] = useState(new Date());
 
-  const remainingLabel = timeMode === "late" ? "5分すぎました" : timeMode === "soon" ? "あと 4分" : "あと 18分";
+  const timeStatus = getTimeStatus(targetTime, now);
   const progress = calculateProgress(tasks.length, totalTaskCount);
-  const rabbitMode = getRabbitMode(timeMode, tasks.length === 0);
+  const rabbitMode = getRabbitMode(timeStatus.mode, tasks.length === 0);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => window.clearInterval(timerId);
+  }, []);
 
   useEffect(() => {
     saveSettings({ targetTime, tasks, totalTaskCount });
@@ -293,7 +337,6 @@ export default function App() {
   function resetToday() {
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
-    setTimeMode("normal");
   }
 
   function resetAllSettings() {
@@ -301,11 +344,6 @@ export default function App() {
     setTargetTime("08:00");
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
-    setTimeMode("normal");
-  }
-
-  function cycleTimeMode() {
-    setTimeMode((prev) => (prev === "normal" ? "soon" : prev === "soon" ? "late" : "normal"));
   }
 
   return (
@@ -326,8 +364,8 @@ export default function App() {
             <>
               <AnalogClock time={targetTime} />
 
-              <div className={`mb-3 text-center text-lg font-black ${timeMode === "late" ? "text-orange-500" : timeMode === "soon" ? "text-amber-500" : "text-sky-600"}`}>
-                {remainingLabel}
+              <div className={`mb-3 rounded-3xl py-3 text-center text-2xl font-black ${timeStatus.mode === "late" ? "bg-orange-50 text-orange-500" : timeStatus.mode === "soon" ? "bg-yellow-50 text-amber-500" : "bg-sky-50 text-sky-600"}`}>
+                {timeStatus.label}
               </div>
 
               <Rabbit mode={rabbitMode} />
@@ -355,10 +393,6 @@ export default function App() {
                   </motion.div>
                 ))
               )}
-
-              <button onClick={cycleTimeMode} className="mt-3 w-full rounded-2xl bg-slate-100 py-2 text-sm font-bold text-gray-500">
-                モック用：通常 → あと5分未満 → 時間オーバー
-              </button>
             </>
           ) : (
             <>
