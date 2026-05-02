@@ -13,12 +13,6 @@ const initialTasks = [
   "くつをはく",
 ];
 
-function calculateProgress(remainingCount, totalCount) {
-  if (totalCount <= 0) return 0;
-  const completed = Math.max(0, totalCount - remainingCount);
-  return Math.min(100, Math.round((completed / totalCount) * 100));
-}
-
 function parseTime(timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   return { h: h || 0, m: m || 0 };
@@ -65,6 +59,32 @@ function getTimeStatus(targetTime, now = new Date()) {
     label: `あと ${Math.ceil(diffMs / 60000)}分`,
     diffMs,
   };
+}
+
+function calculateProgress(remainingCount, totalCount) {
+  if (totalCount <= 0) return 0;
+  const completed = Math.max(0, totalCount - remainingCount);
+  return Math.min(100, Math.round((completed / totalCount) * 100));
+}
+
+function getRabbitMode(timeMode, allDone) {
+  if (allDone) return "happy";
+  if (timeMode === "late") return "late";
+  if (timeMode === "soon") return "soon";
+  return "normal";
+}
+
+function loadSavedSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch (error) {
+    console.warn("保存データの読み込みに失敗しました", error);
+    return null;
+  }
 }
 
 function saveSettings(settings) {
