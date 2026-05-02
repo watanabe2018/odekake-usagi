@@ -13,6 +13,12 @@ const initialTasks = [
   "くつをはく",
 ];
 
+function calculateProgress(remainingCount, totalCount) {
+  if (totalCount <= 0) return 0;
+  const completed = Math.max(0, totalCount - remainingCount);
+  return Math.min(100, Math.round((completed / totalCount) * 100));
+}
+
 function parseTime(timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   return { h: h || 0, m: m || 0 };
