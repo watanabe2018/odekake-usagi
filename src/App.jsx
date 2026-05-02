@@ -26,6 +26,14 @@ function getTargetDateTime(targetTime, now = new Date()) {
 }
 
 function getTimeStatus(targetTime, now = new Date()) {
+  if (!targetTime) {
+    return {
+      mode: "idle",
+      label: "",
+      diffMs: null,
+    };
+  }
+
   const target = getTargetDateTime(targetTime, now);
   const diffMs = target.getTime() - now.getTime();
   const absMinutes = Math.ceil(Math.abs(diffMs) / 60000);
@@ -51,32 +59,6 @@ function getTimeStatus(targetTime, now = new Date()) {
     label: `あと ${Math.ceil(diffMs / 60000)}分`,
     diffMs,
   };
-}
-
-function calculateProgress(remainingCount, totalCount) {
-  if (totalCount <= 0) return 0;
-  const completed = Math.max(0, totalCount - remainingCount);
-  return Math.min(100, Math.round((completed / totalCount) * 100));
-}
-
-function getRabbitMode(timeMode, allDone) {
-  if (allDone) return "happy";
-  if (timeMode === "late") return "late";
-  if (timeMode === "soon") return "soon";
-  return "normal";
-}
-
-function loadSavedSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    return parsed;
-  } catch (error) {
-    console.warn("保存データの読み込みに失敗しました", error);
-    return null;
-  }
 }
 
 function saveSettings(settings) {
@@ -318,7 +300,7 @@ function Confetti({ show }) {
 export default function App() {
   const saved = loadSavedSettings();
   const [screen, setScreen] = useState("main");
-  const [targetTime, setTargetTime] = useState(saved?.targetTime || "08:00");
+  const [targetTime, setTargetTime] = useState(saved?.targetTime || "");
   const [tasks, setTasks] = useState(Array.isArray(saved?.tasks) && saved.tasks.length > 0 ? saved.tasks : initialTasks);
   const [totalTaskCount, setTotalTaskCount] = useState(saved?.totalTaskCount || initialTasks.length);
   const [newTask, setNewTask] = useState("");
@@ -327,7 +309,7 @@ export default function App() {
 
   const timeStatus = getTimeStatus(targetTime, now);
   const progress = calculateProgress(tasks.length, totalTaskCount);
-  const rabbitMode = getRabbitMode(timeStatus.mode, tasks.length === 0);
+  const rabbitMode = timeStatus.mode === "idle" ? "normal" : getRabbitMode(timeStatus.mode, tasks.length === 0);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -378,7 +360,7 @@ export default function App() {
           <h1 className="text-xl font-black text-pink-600">おでかけうさぎ</h1>
           <Button onClick={() => setScreen(screen === "main" ? "settings" : "main")} className="bg-white text-pink-500 shadow-sm">
             <Icon label={screen === "main" ? "settings" : "home"} />
-            {screen === "main" ? "設定" : "戻る"}
+            {screen === "main" ? "もくひょう" : "もどる"}
           </Button>
         </div>
 
@@ -390,7 +372,7 @@ export default function App() {
               <AnalogClock time={targetTime} />
 
               <div className={`mb-3 rounded-3xl py-3 text-center text-2xl font-black ${timeStatus.mode === "late" ? "bg-orange-50 text-orange-500" : timeStatus.mode === "soon" ? "bg-yellow-50 text-amber-500" : "bg-sky-50 text-sky-600"}`}>
-                {timeStatus.label}
+                {timeStatus.label && timeStatus.label}
               </div>
 
               <Rabbit mode={rabbitMode} />
