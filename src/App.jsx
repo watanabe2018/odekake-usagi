@@ -285,7 +285,7 @@ function Character({ mode = "normal", character = "rabbit" }) {
 }
 
 function GoingOutCharacter({ character = "rabbit" }) {
-  const selected = characterOptions.find((option) => option.id === character) || characterOptions[0];() {
+  const selected = characterOptions.find((option) => option.id === character) || characterOptions[0];
   return (
     <div className="relative my-4 h-40 overflow-hidden rounded-3xl bg-gradient-to-r from-yellow-50 via-pink-50 to-sky-50">
       <div className="absolute bottom-0 left-0 right-0 h-10 bg-green-100" />
