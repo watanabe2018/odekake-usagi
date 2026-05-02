@@ -11,6 +11,13 @@ const initialTasks = [
   "トイレ",
 ];
 
+const characterOptions = [
+  { id: "rabbit", label: "うさぎ", icon: "🐰", item: "🎒" },
+  { id: "penguin", label: "ぺんぎん", icon: "🐧", item: "🎒" },
+  { id: "boy", label: "男の子", icon: "👦", item: "🎒" },
+  { id: "girl", label: "女の子", icon: "👧", item: "🎒" },
+];
+
 function parseTime(timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
   return { h: h || 0, m: m || 0 };
@@ -188,14 +195,8 @@ function AnalogClock({ time }) {
   );
 }
 
-function RabbitFace({ mode }) {
-  if (mode === "late") return <><span>＞</span><span>＜</span></>;
-  if (mode === "soon") return <><span>・</span><span>・</span></>;
-  if (mode === "happy") return <><span>⌒</span><span>⌒</span></>;
-  return <><span>●</span><span>●</span></>;
-}
-
-function Rabbit({ mode = "normal" }) {
+function Character({ mode = "normal", character = "rabbit" }) {
+  const selected = characterOptions.find((option) => option.id === character) || characterOptions[0];
   const config = {
     normal: {
       message: "るんるん♪",
@@ -219,10 +220,10 @@ function Rabbit({ mode = "normal" }) {
       bubble: "bg-orange-50 text-orange-600",
     },
     happy: {
-      message: "ぜんぶできた！",
+      message: "やったね！",
       badge: "💕",
-      body: { y: [0, -18, 0], rotate: [-5, 5, -5] },
-      duration: 0.8,
+      body: { y: [0, -22, 0], rotate: [-10, 10, -10], scale: [1, 1.12, 1] },
+      duration: 0.55,
       bubble: "bg-yellow-50 text-amber-600",
     },
   }[mode];
@@ -240,39 +241,51 @@ function Rabbit({ mode = "normal" }) {
       <motion.div
         animate={config.body}
         transition={{ repeat: Infinity, duration: config.duration, ease: "easeInOut" }}
-        className="relative h-32 w-36"
+        className="relative flex h-32 w-36 items-center justify-center"
       >
         <motion.div
-          animate={mode === "normal" ? { rotate: [-12, -4, -12] } : { rotate: [-20, 5, -20] }}
+          animate={mode === "happy" ? { rotate: [-8, 8, -8], scale: [1, 1.18, 1] } : { rotate: [-3, 3, -3] }}
           transition={{ repeat: Infinity, duration: config.duration }}
-          className="absolute left-8 top-0 h-20 w-8 rounded-full border-4 border-white bg-pink-100 shadow-sm"
-        />
+          className="text-7xl drop-shadow-lg"
+        >
+          {selected.icon}
+        </motion.div>
+
+        {mode === "happy" && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 18, x: -20, scale: 0.6 }}
+              animate={{ opacity: [0, 1, 0], y: -45, x: -70, scale: [0.6, 1.2, 0.8] }}
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="absolute text-3xl"
+            >
+              ✨
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 18, x: 20, scale: 0.6 }}
+              animate={{ opacity: [0, 1, 0], y: -52, x: 70, scale: [0.6, 1.25, 0.8] }}
+              transition={{ repeat: Infinity, duration: 1, delay: 0.15 }}
+              className="absolute text-3xl"
+            >
+              💖
+            </motion.div>
+          </>
+        )}
+
         <motion.div
-          animate={mode === "normal" ? { rotate: [12, 4, 12] } : { rotate: [20, -5, 20] }}
+          animate={mode === "late" ? { scale: [1, 1.35, 1] } : { scale: [1, 1.1, 1] }}
           transition={{ repeat: Infinity, duration: config.duration }}
-          className="absolute right-8 top-0 h-20 w-8 rounded-full border-4 border-white bg-pink-100 shadow-sm"
-        />
-        <div className="absolute bottom-0 left-1/2 h-24 w-32 -translate-x-1/2 rounded-[44%] border-4 border-pink-100 bg-white shadow-xl">
-          <div className="absolute left-7 top-9 flex w-20 justify-between text-xl font-black text-slate-700">
-            <RabbitFace mode={mode} />
-          </div>
-          <div className="absolute left-1/2 top-14 h-2 w-3 -translate-x-1/2 rounded-full bg-pink-300" />
-          <div className="absolute left-7 top-16 h-3 w-7 rounded-full bg-pink-200/70" />
-          <div className="absolute right-7 top-16 h-3 w-7 rounded-full bg-pink-200/70" />
-          <motion.div
-            animate={mode === "late" ? { scale: [1, 1.35, 1] } : { scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: config.duration }}
-            className="absolute -right-2 top-2 text-2xl"
-          >
-            {config.badge}
-          </motion.div>
-        </div>
+          className="absolute right-4 top-4 text-2xl"
+        >
+          {config.badge}
+        </motion.div>
       </motion.div>
     </div>
   );
 }
 
-function GoingOutRabbit() {
+function GoingOutCharacter({ character = "rabbit" }) {
+  const selected = characterOptions.find((option) => option.id === character) || characterOptions[0];() {
   return (
     <div className="relative my-4 h-40 overflow-hidden rounded-3xl bg-gradient-to-r from-yellow-50 via-pink-50 to-sky-50">
       <div className="absolute bottom-0 left-0 right-0 h-10 bg-green-100" />
@@ -284,7 +297,7 @@ function GoingOutRabbit() {
         transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
         className="absolute bottom-8 left-0 text-6xl"
       >
-        🐰🎒
+        {selected.icon}{selected.item}
       </motion.div>
       <motion.div
         animate={{ opacity: [0, 1, 0], scale: [0.7, 1.2, 0.7] }}
@@ -328,12 +341,14 @@ export default function App() {
   const [tasks, setTasks] = useState(Array.isArray(saved?.tasks) && saved.tasks.length > 0 ? saved.tasks : initialTasks);
   const [totalTaskCount, setTotalTaskCount] = useState(saved?.totalTaskCount || initialTasks.length);
   const [newTask, setNewTask] = useState("");
+  const [selectedCharacter, setSelectedCharacter] = useState(saved?.selectedCharacter || "rabbit");
   const [doneFlash, setDoneFlash] = useState(false);
   const [now, setNow] = useState(new Date());
 
   const timeStatus = getTimeStatus(targetTime, now);
   const progress = calculateProgress(tasks.length, totalTaskCount);
   const rabbitMode = timeStatus.mode === "idle" ? "normal" : getRabbitMode(timeStatus.mode, tasks.length === 0);
+  const characterMode = doneFlash ? "happy" : rabbitMode;
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -343,8 +358,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    saveSettings({ targetTime, tasks, totalTaskCount });
-  }, [targetTime, tasks, totalTaskCount]);
+    saveSettings({ targetTime, tasks, totalTaskCount, selectedCharacter });
+  }, [targetTime, tasks, totalTaskCount, selectedCharacter]);
 
   function completeTask(task) {
     setTasks((prev) => prev.filter((t) => t !== task));
@@ -368,6 +383,7 @@ export default function App() {
   function resetToday() {
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
+    setSelectedCharacter("rabbit");
   }
 
   function resetAllSettings() {
@@ -401,7 +417,7 @@ export default function App() {
                 </div>
               )}
 
-              <Rabbit mode={rabbitMode} />
+              <Character mode={characterMode} character={selectedCharacter} />
 
               <div className="mb-3 rounded-full bg-pink-50 p-2 text-center font-black text-pink-500">できたメーター {progress}%</div>
 
@@ -410,7 +426,7 @@ export default function App() {
                   <div className="mb-2 text-3xl">🎉</div>
                   <div className="text-xl font-black text-pink-600">ぜんぶできた！</div>
                   <p className="mt-1 text-sm font-bold text-amber-600">うさぎさんとおでかけしよう</p>
-                  <GoingOutRabbit />
+                  <GoingOutCharacter character={selectedCharacter} />
                   <Button onClick={resetToday} className="mt-2 bg-pink-400 text-white">もう一度はじめる</Button>
                 </div>
               ) : (
@@ -438,6 +454,20 @@ export default function App() {
                 onChange={(e) => setTargetTime(e.target.value)}
                 className="mb-3 w-full rounded-2xl border border-pink-100 bg-pink-50 p-3 text-xl font-black text-pink-600"
               />
+
+              <label className="mb-1 block text-sm font-bold text-pink-500">キャラクター</label>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                {characterOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => setSelectedCharacter(option.id)}
+                    className={`rounded-2xl border-2 p-3 text-center font-black transition active:scale-95 ${selectedCharacter === option.id ? "border-pink-400 bg-pink-50 text-pink-600" : "border-pink-100 bg-white text-slate-500"}`}
+                  >
+                    <div className="text-3xl">{option.icon}</div>
+                    <div className="mt-1 text-sm">{option.label}</div>
+                  </button>
+                ))}
+              </div>
 
               <label className="mb-1 block text-sm font-bold text-pink-500">やること</label>
               <div className="mb-3 flex gap-2">
