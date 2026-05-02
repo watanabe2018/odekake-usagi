@@ -94,7 +94,7 @@ function Button({ children, className = "", ...props }) {
 
 function Icon({ label }) {
   const map = {
-    settings: "⚙️",
+    settings: "🎯",
     home: "🏠",
     plus: "＋",
   };
@@ -348,7 +348,7 @@ export default function App() {
 
   function resetAllSettings() {
     localStorage.removeItem(STORAGE_KEY);
-    setTargetTime("08:00");
+    setTargetTime("");
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
   }
@@ -371,9 +371,11 @@ export default function App() {
             <>
               <AnalogClock time={targetTime} />
 
-              <div className={`mb-3 rounded-3xl py-3 text-center text-2xl font-black ${timeStatus.mode === "late" ? "bg-orange-50 text-orange-500" : timeStatus.mode === "soon" ? "bg-yellow-50 text-amber-500" : "bg-sky-50 text-sky-600"}`}>
-                {timeStatus.label && timeStatus.label}
-              </div>
+              {timeStatus.label && (
+                <div className={`mb-3 rounded-3xl py-3 text-center text-2xl font-black ${timeStatus.mode === "late" ? "bg-orange-50 text-orange-500" : timeStatus.mode === "soon" ? "bg-yellow-50 text-amber-500" : "bg-sky-50 text-sky-600"}`}>
+                  {timeStatus.label}
+                </div>
+              )}
 
               <Rabbit mode={rabbitMode} />
 
