@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import './index.css'
+
+const STORAGE_KEY = "odekake-usagi-settings-v1";
 
 const initialTasks = [
   "おきがえ",
@@ -27,6 +28,27 @@ function getRabbitMode(timeMode, allDone) {
   if (timeMode === "late") return "late";
   if (timeMode === "soon") return "soon";
   return "normal";
+}
+
+function loadSavedSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch (error) {
+    console.warn("保存データの読み込みに失敗しました", error);
+    return null;
+  }
+}
+
+function saveSettings(settings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch (error) {
+    console.warn("保存に失敗しました", error);
+  }
 }
 
 // simple tests
@@ -98,11 +120,7 @@ function AnalogClock({ time }) {
           const angle = i * 6;
           const isFive = i % 5 === 0;
           return (
-            <div
-              key={i}
-              className="absolute left-1/2 top-1/2"
-              style={{ transform: `rotate(${angle}deg)` }}
-            >
+            <div key={i} className="absolute left-1/2 top-1/2" style={{ transform: `rotate(${angle}deg)` }}>
               <div
                 className={`${isFive ? "h-3 w-1 bg-pink-300" : "h-1.5 w-0.5 bg-pink-100"}`}
                 style={{ transform: "translate(-50%, -102px)" }}
@@ -117,7 +135,7 @@ function AnalogClock({ time }) {
         />
 
         <div
-          className="absolute left-1/2 top-1/2 h-22 w-1 origin-bottom rounded-full bg-sky-500 shadow-sm"
+          className="absolute left-1/2 top-1/2 w-1 origin-bottom rounded-full bg-sky-500 shadow-sm"
           style={{ height: 86, transform: `translate(-50%, -100%) rotate(${minuteAngle}deg)` }}
         />
 
@@ -236,16 +254,22 @@ function Confetti({ show }) {
 }
 
 export default function App() {
+  const saved = loadSavedSettings();
   const [screen, setScreen] = useState("main");
-  const [targetTime, setTargetTime] = useState("08:00");
-  const [tasks, setTasks] = useState(initialTasks);
+  const [targetTime, setTargetTime] = useState(saved?.targetTime || "08:00");
+  const [tasks, setTasks] = useState(Array.isArray(saved?.tasks) && saved.tasks.length > 0 ? saved.tasks : initialTasks);
+  const [totalTaskCount, setTotalTaskCount] = useState(saved?.totalTaskCount || initialTasks.length);
   const [newTask, setNewTask] = useState("");
   const [doneFlash, setDoneFlash] = useState(false);
   const [timeMode, setTimeMode] = useState("normal");
 
   const remainingLabel = timeMode === "late" ? "5分すぎました" : timeMode === "soon" ? "あと 4分" : "あと 18分";
-  const progress = calculateProgress(tasks.length, initialTasks.length);
+  const progress = calculateProgress(tasks.length, totalTaskCount);
   const rabbitMode = getRabbitMode(timeMode, tasks.length === 0);
+
+  useEffect(() => {
+    saveSettings({ targetTime, tasks, totalTaskCount });
+  }, [targetTime, tasks, totalTaskCount]);
 
   function completeTask(task) {
     setTasks((prev) => prev.filter((t) => t !== task));
@@ -254,9 +278,30 @@ export default function App() {
   }
 
   function addTask() {
-    if (!newTask.trim()) return;
-    setTasks((prev) => [...prev, newTask.trim()]);
+    const trimmed = newTask.trim();
+    if (!trimmed) return;
+    setTasks((prev) => [...prev, trimmed]);
+    setTotalTaskCount((prev) => Math.max(prev + 1, tasks.length + 1));
     setNewTask("");
+  }
+
+  function removeTask(task) {
+    setTasks((prev) => prev.filter((t) => t !== task));
+    setTotalTaskCount((prev) => Math.max(0, prev - 1));
+  }
+
+  function resetToday() {
+    setTasks(initialTasks);
+    setTotalTaskCount(initialTasks.length);
+    setTimeMode("normal");
+  }
+
+  function resetAllSettings() {
+    localStorage.removeItem(STORAGE_KEY);
+    setTargetTime("08:00");
+    setTasks(initialTasks);
+    setTotalTaskCount(initialTasks.length);
+    setTimeMode("normal");
   }
 
   function cycleTimeMode() {
@@ -270,6 +315,7 @@ export default function App() {
           <h1 className="text-xl font-black text-pink-600">おでかけうさぎ</h1>
           <Button onClick={() => setScreen(screen === "main" ? "settings" : "main")} className="bg-white text-pink-500 shadow-sm">
             <Icon label={screen === "main" ? "settings" : "home"} />
+            {screen === "main" ? "設定" : "戻る"}
           </Button>
         </div>
 
@@ -288,12 +334,27 @@ export default function App() {
 
               <div className="mb-3 rounded-full bg-pink-50 p-2 text-center font-black text-pink-500">できたメーター {progress}%</div>
 
-              {tasks.map((task) => (
-                <div key={task} className="mb-2 flex items-center justify-between rounded-2xl bg-pink-50 p-3">
-                  <span className="font-bold">{task}</span>
-                  <Button onClick={() => completeTask(task)} className="bg-pink-400 text-white">できた！</Button>
+              {tasks.length === 0 ? (
+                <div className="rounded-3xl bg-yellow-50 p-5 text-center">
+                  <div className="mb-2 text-3xl">🎉</div>
+                  <div className="text-xl font-black text-pink-600">ぜんぶできた！</div>
+                  <Button onClick={resetToday} className="mt-4 bg-pink-400 text-white">あした用に戻す</Button>
                 </div>
-              ))}
+              ) : (
+                tasks.map((task) => (
+                  <motion.div
+                    key={task}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 80, scale: 0.8 }}
+                    className="mb-2 flex items-center justify-between rounded-2xl bg-pink-50 p-3"
+                  >
+                    <span className="font-bold">{task}</span>
+                    <Button onClick={() => completeTask(task)} className="bg-pink-400 text-white">できた！</Button>
+                  </motion.div>
+                ))
+              )}
 
               <button onClick={cycleTimeMode} className="mt-3 w-full rounded-2xl bg-slate-100 py-2 text-sm font-bold text-gray-500">
                 モック用：通常 → あと5分未満 → 時間オーバー
@@ -314,6 +375,9 @@ export default function App() {
                 <input
                   value={newTask}
                   onChange={(e) => setNewTask(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addTask();
+                  }}
                   placeholder="例：かみをとかす"
                   className="min-w-0 flex-1 rounded-2xl border border-pink-100 p-2"
                 />
@@ -323,9 +387,16 @@ export default function App() {
               {tasks.map((task) => (
                 <div key={task} className="mb-2 flex justify-between rounded-2xl bg-pink-50 p-3">
                   <span className="font-bold">{task}</span>
-                  <button onClick={() => setTasks(tasks.filter((t) => t !== task))} className="text-sm font-bold text-pink-400">削除</button>
+                  <button onClick={() => removeTask(task)} className="text-sm font-bold text-pink-400">削除</button>
                 </div>
               ))}
+
+              <Button onClick={resetToday} className="mt-4 w-full bg-sky-100 text-sky-600">今日のやることを初期状態に戻す</Button>
+              <Button onClick={resetAllSettings} className="mt-2 w-full bg-slate-100 text-slate-500">設定をリセット</Button>
+
+              <div className="mt-4 rounded-2xl bg-yellow-50 p-3 text-sm font-bold text-amber-600">
+                目標時間とやることは、このスマホのブラウザに自動保存されます。
+              </div>
             </>
           )}
         </div>
