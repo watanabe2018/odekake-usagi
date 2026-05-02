@@ -33,3 +33,15 @@ export default defineConfig({
     }),
   ],
 })
+VitePWA({
+  registerType: 'autoUpdate',
+  devOptions: {
+    enabled: true,
+  },
+  workbox: {
+    cleanupOutdatedCaches: true,
+  },
+  manifest: {
+    // ここは今のまま
+  },
+})
