@@ -266,6 +266,31 @@ function Rabbit({ mode = "normal" }) {
   );
 }
 
+function GoingOutRabbit() {
+  return (
+    <div className="relative my-4 h-40 overflow-hidden rounded-3xl bg-gradient-to-r from-yellow-50 via-pink-50 to-sky-50">
+      <div className="absolute bottom-0 left-0 right-0 h-10 bg-green-100" />
+      <div className="absolute left-5 top-5 text-3xl">🏠</div>
+      <div className="absolute right-5 top-5 text-3xl">🌈</div>
+      <motion.div
+        initial={{ x: -80, y: 10 }}
+        animate={{ x: 300, y: [10, -4, 10, -4, 10] }}
+        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+        className="absolute bottom-8 left-0 text-6xl"
+      >
+        🐰🎒
+      </motion.div>
+      <motion.div
+        animate={{ opacity: [0, 1, 0], scale: [0.7, 1.2, 0.7] }}
+        transition={{ repeat: Infinity, duration: 1.3 }}
+        className="absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-black text-pink-500 shadow-sm"
+      >
+        いってきます！
+      </motion.div>
+    </div>
+  );
+}
+
 function Confetti({ show }) {
   const pieces = useMemo(() => Array.from({ length: 12 }), []);
   return (
@@ -376,7 +401,9 @@ export default function App() {
                 <div className="rounded-3xl bg-yellow-50 p-5 text-center">
                   <div className="mb-2 text-3xl">🎉</div>
                   <div className="text-xl font-black text-pink-600">ぜんぶできた！</div>
-                  <Button onClick={resetToday} className="mt-4 bg-pink-400 text-white">あした用に戻す</Button>
+                  <p className="mt-1 text-sm font-bold text-amber-600">うさぎさんとおでかけしよう</p>
+                  <GoingOutRabbit />
+                  <Button onClick={resetToday} className="mt-2 bg-pink-400 text-white">もう一度はじめる</Button>
                 </div>
               ) : (
                 tasks.map((task) => (
