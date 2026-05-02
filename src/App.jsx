@@ -4,12 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const STORAGE_KEY = "odekake-usagi-settings-v1";
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
-const initialTasks = [
-  "お着換え",
-  "ごはん",
-  "はみがき",
-  "トイレ",
-];
+const initialTasks = ["お着換え", "ごはん", "はみがき", "トイレ"];
 
 const characterOptions = [
   { id: "rabbit", label: "うさぎ", icon: "🐰", item: "🎒" },
@@ -19,6 +14,7 @@ const characterOptions = [
 ];
 
 function parseTime(timeStr) {
+  if (!timeStr) return { h: 0, m: 0 };
   const [h, m] = timeStr.split(":").map(Number);
   return { h: h || 0, m: m || 0 };
 }
@@ -32,11 +28,7 @@ function getTargetDateTime(targetTime, now = new Date()) {
 
 function getTimeStatus(targetTime, now = new Date()) {
   if (!targetTime) {
-    return {
-      mode: "idle",
-      label: "",
-      diffMs: null,
-    };
+    return { mode: "idle", label: "", diffMs: null };
   }
 
   const target = getTargetDateTime(targetTime, now);
@@ -44,26 +36,14 @@ function getTimeStatus(targetTime, now = new Date()) {
   const absMinutes = Math.ceil(Math.abs(diffMs) / 60000);
 
   if (diffMs < 0) {
-    return {
-      mode: "late",
-      label: `${absMinutes}分すぎました`,
-      diffMs,
-    };
+    return { mode: "late", label: `${absMinutes}分すぎました`, diffMs };
   }
 
   if (diffMs <= FIVE_MINUTES_MS) {
-    return {
-      mode: "soon",
-      label: `あと ${Math.max(0, Math.ceil(diffMs / 60000))}分`,
-      diffMs,
-    };
+    return { mode: "soon", label: `あと ${Math.max(0, Math.ceil(diffMs / 60000))}分`, diffMs };
   }
 
-  return {
-    mode: "normal",
-    label: `あと ${Math.ceil(diffMs / 60000)}分`,
-    diffMs,
-  };
+  return { mode: "normal", label: `あと ${Math.ceil(diffMs / 60000)}分`, diffMs };
 }
 
 function calculateProgress(remainingCount, totalCount) {
@@ -72,7 +52,8 @@ function calculateProgress(remainingCount, totalCount) {
   return Math.min(100, Math.round((completed / totalCount) * 100));
 }
 
-function getRabbitMode(timeMode, allDone) {
+function getCharacterMode(timeMode, allDone, justCompleted) {
+  if (justCompleted) return "happy";
   if (allDone) return "happy";
   if (timeMode === "late") return "late";
   if (timeMode === "soon") return "soon";
@@ -100,13 +81,11 @@ function saveSettings(settings) {
   }
 }
 
-// simple tests
 (function runTests() {
   const fixedNow = new Date("2026-05-02T07:55:00");
   console.assert(parseTime("08:30").h === 8, "hour parse");
   console.assert(parseTime("08:30").m === 30, "minute parse");
-  console.assert(calculateProgress(0, 5) === 100, "progress 100");
-  console.assert(getRabbitMode("late", true) === "happy", "rabbit happy wins");
+  console.assert(calculateProgress(0, 4) === 100, "progress 100");
   console.assert(getTimeStatus("08:00", fixedNow).mode === "soon", "5 minutes left should be soon");
   console.assert(getTimeStatus("08:10", fixedNow).mode === "normal", "15 minutes left should be normal");
   console.assert(getTimeStatus("07:50", fixedNow).mode === "late", "past target should be late");
@@ -124,15 +103,20 @@ function Button({ children, className = "", ...props }) {
 }
 
 function Icon({ label }) {
-  const map = {
-    settings: "🎯",
-    home: "🏠",
-    plus: "＋",
-  };
+  const map = { settings: "🎯", home: "🏠", plus: "＋" };
   return <span>{map[label] || "•"}</span>;
 }
 
 function AnalogClock({ time }) {
+  if (!time) {
+    return (
+      <div className="mb-5 rounded-3xl bg-pink-50 p-5 text-center">
+        <div className="text-3xl">🎯</div>
+        <div className="mt-2 text-lg font-black text-pink-600">もくひょうの時間を決めよう</div>
+      </div>
+    );
+  }
+
   const { h, m } = parseTime(time);
   const minuteAngle = m * 6;
   const hourAngle = (h % 12) * 30 + m * 0.5;
@@ -156,10 +140,7 @@ function AnalogClock({ time }) {
             <div
               key={num}
               className="absolute flex h-8 w-8 items-center justify-center rounded-full text-base font-black text-pink-500"
-              style={{
-                left: `calc(50% + ${x}px - 16px)`,
-                top: `calc(50% + ${y}px - 16px)`,
-              }}
+              style={{ left: `calc(50% + ${x}px - 16px)`, top: `calc(50% + ${y}px - 16px)` }}
             >
               {num}
             </div>
@@ -222,7 +203,7 @@ function Character({ mode = "normal", character = "rabbit" }) {
     happy: {
       message: "やったね！",
       badge: "💕",
-      body: { y: [0, -22, 0], rotate: [-10, 10, -10], scale: [1, 1.12, 1] },
+      body: { y: [0, -24, 0], rotate: [-12, 12, -12], scale: [1, 1.15, 1] },
       duration: 0.55,
       bubble: "bg-yellow-50 text-amber-600",
     },
@@ -340,20 +321,17 @@ export default function App() {
   const [targetTime, setTargetTime] = useState(saved?.targetTime || "");
   const [tasks, setTasks] = useState(Array.isArray(saved?.tasks) && saved.tasks.length > 0 ? saved.tasks : initialTasks);
   const [totalTaskCount, setTotalTaskCount] = useState(saved?.totalTaskCount || initialTasks.length);
-  const [newTask, setNewTask] = useState("");
   const [selectedCharacter, setSelectedCharacter] = useState(saved?.selectedCharacter || "rabbit");
+  const [newTask, setNewTask] = useState("");
   const [doneFlash, setDoneFlash] = useState(false);
   const [now, setNow] = useState(new Date());
 
   const timeStatus = getTimeStatus(targetTime, now);
   const progress = calculateProgress(tasks.length, totalTaskCount);
-  const rabbitMode = timeStatus.mode === "idle" ? "normal" : getRabbitMode(timeStatus.mode, tasks.length === 0);
-  const characterMode = doneFlash ? "happy" : rabbitMode;
+  const characterMode = getCharacterMode(timeStatus.mode, tasks.length === 0, doneFlash);
 
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      setNow(new Date());
-    }, 1000);
+    const timerId = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timerId);
   }, []);
 
@@ -364,7 +342,7 @@ export default function App() {
   function completeTask(task) {
     setTasks((prev) => prev.filter((t) => t !== task));
     setDoneFlash(true);
-    setTimeout(() => setDoneFlash(false), 1000);
+    setTimeout(() => setDoneFlash(false), 1200);
   }
 
   function addTask() {
@@ -383,7 +361,6 @@ export default function App() {
   function resetToday() {
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
-    setSelectedCharacter("rabbit");
   }
 
   function resetAllSettings() {
@@ -391,6 +368,7 @@ export default function App() {
     setTargetTime("");
     setTasks(initialTasks);
     setTotalTaskCount(initialTasks.length);
+    setSelectedCharacter("rabbit");
   }
 
   return (
@@ -425,7 +403,7 @@ export default function App() {
                 <div className="rounded-3xl bg-yellow-50 p-5 text-center">
                   <div className="mb-2 text-3xl">🎉</div>
                   <div className="text-xl font-black text-pink-600">ぜんぶできた！</div>
-                  <p className="mt-1 text-sm font-bold text-amber-600">うさぎさんとおでかけしよう</p>
+                  <p className="mt-1 text-sm font-bold text-amber-600">いっしょにおでかけしよう</p>
                   <GoingOutCharacter character={selectedCharacter} />
                   <Button onClick={resetToday} className="mt-2 bg-pink-400 text-white">もう一度はじめる</Button>
                 </div>
@@ -494,7 +472,7 @@ export default function App() {
               <Button onClick={resetAllSettings} className="mt-2 w-full bg-slate-100 text-slate-500">設定をリセット</Button>
 
               <div className="mt-4 rounded-2xl bg-yellow-50 p-3 text-sm font-bold text-amber-600">
-                目標時間とやることは、このスマホのブラウザに自動保存されます。
+                目標時間・キャラクター・やることは、このスマホのブラウザに自動保存されます。
               </div>
             </>
           )}
