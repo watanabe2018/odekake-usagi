@@ -5,12 +5,10 @@ const STORAGE_KEY = "odekake-usagi-settings-v1";
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
 const initialTasks = [
-  "おきがえ",
-  "あさごはん",
+  "お着換え",
+  "ごはん",
   "はみがき",
   "トイレ",
-  "ランドセル",
-  "くつをはく",
 ];
 
 function parseTime(timeStr) {
